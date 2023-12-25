@@ -1,0 +1,63 @@
+version: "3.7"
+
+services:
+  app:
+    container_name: eshop-app
+    build: .
+    ports: [ "8081:8081" ]
+    depends_on:
+      - db
+      - kafka
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/dbase
+      - SPRING_DATASOURCE_USERNAME=denmit
+      - SPRING_DATASOURCE_PASSWORD=1981
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop
+  db:
+    image: 'postgres:13.1-alpine'
+    container_name: eshopdb
+    ports: [ "5432:5432" ]
+    environment:
+      - POSTGRES_PASSWORD=1981
+      - POSTGRES_USER=denmit
+      - POSTGRES_DB=dbase
+    depends_on:
+      - zookeeper
+      - kafka
+      - kafdrop
+
+  zookeeper:
+    image: zookeeper:3.7.0
+    container_name: zookeeper-eshop
+    restart: "no"
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka-eshop
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+    environment:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+        KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop-eshop
+    restart: "no"
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+      JVM_OPTS: "-Xms16M -Xmx48M"
+    depends_on:
+      - "kafka"
